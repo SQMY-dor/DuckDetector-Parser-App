@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- QR code simplified icon -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M28,28 h24 v24 h-24 z M32,32 h16 v16 h-16 z M36,36 h4 v4 h-4 z M40,40 h4 v4 h-4 z M36,44 h4 v4 h-4 z M44,36 h4 v4 h-4 z M56,28 h24 v24 h-24 z M60,32 h16 v16 h-16 z M64,36 h4 v4 h-4 z M68,40 h4 v4 h-4 z M64,44 h4 v4 h-4 z M72,36 h4 v4 h-4 z M28,56 h24 v24 h-24 z M32,60 h16 v16 h-16 z M36,64 h4 v4 h-4 z M40,68 h4 v4 h-4 z M36,72 h4 v4 h-4 z M44,64 h4 v4 h-4 z M56,60 v4 h4 v-4 z M60,56 v4 h4 v-4 z M64,60 v4 h4 v-4 z M72,56 v4 h4 v-4 z M56,64 v4 h4 v-4 z M68,64 v4 h4 v-4 z M56,72 v4 h4 v-4 z M60,76 v4 h4 v-4 z M68,72 v4 h4 v-4 z M64,76 v4 h4 v-4 z M72,68 v4 h4 v-4 z M76,60 v4 h4 v-4 z M76,68 v4 h4 v-4 z M76,76 v4 h4 v-4 z"/>
+</vector>
