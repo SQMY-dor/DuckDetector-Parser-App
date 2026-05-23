@@ -6,11 +6,8 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -26,7 +23,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Error
@@ -34,17 +30,16 @@ import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material3.Button
-import androidx.compose.material3.ContainedLoadingIndicator
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -56,7 +51,7 @@ import androidx.compose.ui.unit.dp
 import com.eltavine.duckparse.model.DeviceInfoReport
 import com.eltavine.duckparse.model.DeviceInfoSection
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ParserScreen(
     viewModel: ParserViewModel,
@@ -83,11 +78,8 @@ fun ParserScreen(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        LargeTopAppBar(
+        TopAppBar(
             title = { Text("DuckParse") },
-            colors = TopAppBarDefaults.largeTopAppBarColors(
-                containerColor = MaterialTheme.colorScheme.surface,
-            ),
         )
 
         LazyColumn(
@@ -139,10 +131,7 @@ fun ParserScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            ContainedLoadingIndicator(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                indicatorColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
+                            CircularProgressIndicator()
                             Spacer(Modifier.height(12.dp))
                             Text("Scanning image...", style = MaterialTheme.typography.bodyMedium)
                         }
