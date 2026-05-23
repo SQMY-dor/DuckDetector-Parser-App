@@ -54,8 +54,5 @@ dependencies {
     // ZXing – used to generate QR codes for display
     implementation("com.google.zxing:core:3.5.3")
 
-    // Coil – image loading
-    implementation("io.coil-kt:coil-compose:3.0.4")
-
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
