@@ -2,8 +2,10 @@ package com.eltavine.duckparse.ui
 
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -62,13 +64,13 @@ fun ParserScreen(
     val context = LocalContext.current
 
     val imagePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
+        contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
         uri?.let { loadAndParse(viewModel, it, context, qrOnly = false) }
     }
 
     val qrImagePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
+        contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
         uri?.let { loadAndParse(viewModel, it, context, qrOnly = true) }
     }
@@ -102,7 +104,7 @@ fun ParserScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Button(
-                            onClick = { imagePicker.launch("image/*") },
+                            onClick = { imagePicker.launch(PickVisualMediaRequest()) },
                             modifier = Modifier.weight(1f),
                         ) {
                             Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -110,7 +112,7 @@ fun ParserScreen(
                             Text("Screenshot")
                         }
                         FilledTonalButton(
-                            onClick = { qrImagePicker.launch("image/*") },
+                            onClick = { qrImagePicker.launch(PickVisualMediaRequest()) },
                             modifier = Modifier.weight(1f),
                         ) {
                             Icon(Icons.Rounded.QrCodeScanner, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -322,13 +324,28 @@ private fun loadAndParse(
     try {
         val resolver = context.contentResolver
 
+        // Copy to app cache to work around privacy-protected content URIs
+        val cacheFile = java.io.File(context.cacheDir, "duckparse_${System.currentTimeMillis()}.jpg")
+        resolver.openInputStream(uri)?.use { input ->
+            cacheFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        } ?: run {
+            Toast.makeText(context, "Cannot read image (privacy restricted)", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (!cacheFile.exists() || cacheFile.length() == 0L) {
+            Toast.makeText(context, "Failed to copy image", Toast.LENGTH_SHORT).show()
+            cacheFile.delete()
+            return
+        }
+
         // Sample image dimensions first to avoid OOM
         val opts = BitmapFactory.Options().apply {
             inJustDecodeBounds = true
         }
-        resolver.openInputStream(uri)?.use { stream ->
-            BitmapFactory.decodeStream(stream, null, opts)
-        }
+        BitmapFactory.decodeFile(cacheFile.absolutePath, opts)
 
         // Calculate sample size for large images (max 2048px on any side)
         val maxDim = 2048
@@ -343,17 +360,20 @@ private fun loadAndParse(
             inSampleSize = sampleSize
             inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
         }
-        val bitmap = resolver.openInputStream(uri)?.use { stream ->
-            BitmapFactory.decodeStream(stream, null, decodeOpts)
-        }
+        val bitmap = BitmapFactory.decodeFile(cacheFile.absolutePath, decodeOpts)
+
+        // Clean up cache file immediately
+        cacheFile.delete()
 
         if (bitmap != null) {
             val label = uri.lastPathSegment ?: "image"
             viewModel.parseImage(bitmap, label, qrOnly)
         } else {
-            android.widget.Toast.makeText(context, "Failed to decode image", android.widget.Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Failed to decode image", Toast.LENGTH_SHORT).show()
         }
+    } catch (e: SecurityException) {
+        Toast.makeText(context, "Permission denied — try selecting a different image", Toast.LENGTH_SHORT).show()
     } catch (e: Exception) {
-        android.widget.Toast.makeText(context, "Error: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
     }
 }
