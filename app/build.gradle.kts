@@ -23,6 +23,28 @@ android {
         }
     }
 
+    // Signing: reads from env vars set by CI (keystore never committed to repo)
+    signingConfigs {
+        val keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+        if (!keystorePath.isNullOrBlank() && java.io.File(keystorePath).exists()) {
+            create("release") {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: ""
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: ""
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: ""
+            }
+        }
+        // If env vars are missing, no signing config → unsigned APK (local builds)
+    }
+
+    buildTypes {
+        getByName("release") {
+            signingConfigs.findByName("release")?.let {
+                signingConfig = it
+            }
+        }
+    }
+
     lint {
         disable += "NullSafeMutableLiveData"
     }
