@@ -24,8 +24,8 @@ import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.WaterDrop
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ContainedLoadingIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -46,7 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.eltavine.duckparse.model.DeviceInfoReport
 import com.eltavine.duckparse.model.DeviceInfoSection
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ParserScreen(
     viewModel: ParserViewModel,
@@ -124,7 +124,10 @@ fun ParserScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator()
+                            ContainedLoadingIndicator(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                indicatorColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
                             Spacer(Modifier.height(12.dp))
                             Text("Scanning image...", style = MaterialTheme.typography.bodyMedium)
                         }
