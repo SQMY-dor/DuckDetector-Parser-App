@@ -302,14 +302,40 @@ private fun loadAndParse(
     context: android.content.Context,
 ) {
     try {
-        val stream = context.contentResolver.openInputStream(uri)
-        val bitmap = BitmapFactory.decodeStream(stream)
-        stream?.close()
+        val resolver = context.contentResolver
+
+        // Sample image dimensions first to avoid OOM
+        val opts = BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+        resolver.openInputStream(uri)?.use { stream ->
+            BitmapFactory.decodeStream(stream, null, opts)
+        }
+
+        // Calculate sample size for large images (max 2048px on any side)
+        val maxDim = 2048
+        val sampleSize = if (opts.outWidth > maxDim || opts.outHeight > maxDim) {
+            maxOf(opts.outWidth, opts.outHeight) / maxDim
+        } else {
+            1
+        }
+
+        // Decode at reduced resolution
+        val decodeOpts = BitmapFactory.Options().apply {
+            inSampleSize = sampleSize
+            inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
+        }
+        val bitmap = resolver.openInputStream(uri)?.use { stream ->
+            BitmapFactory.decodeStream(stream, null, decodeOpts)
+        }
+
         if (bitmap != null) {
             val label = uri.lastPathSegment ?: "image"
             viewModel.parseImage(bitmap, label)
+        } else {
+            android.widget.Toast.makeText(context, "Failed to decode image", android.widget.Toast.LENGTH_SHORT).show()
         }
     } catch (e: Exception) {
-        // handled by ViewModel error state
+        android.widget.Toast.makeText(context, "Error: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
     }
 }
