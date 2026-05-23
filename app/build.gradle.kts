@@ -1,7 +1,33 @@
+import java.io.ByteArrayOutputStream
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+}
+
+// Auto-increment version code from git commit count
+fun gitCommitCount(): Int {
+    return try {
+        val process = ProcessBuilder("git", "rev-list", "--count", "HEAD")
+            .redirectErrorStream(true)
+            .start()
+        process.inputStream.bufferedReader().use { it.readText().trim().toInt() }
+    } catch (_: Exception) {
+        // Fallback: timestamp-based version
+        ((System.currentTimeMillis() / 1000) - 1700000000).toInt()
+    }
+}
+
+fun gitShortHash(): String {
+    return try {
+        val process = ProcessBuilder("git", "rev-parse", "--short=7", "HEAD")
+            .redirectErrorStream(true)
+            .start()
+        process.inputStream.bufferedReader().use { it.readText().trim() }
+    } catch (_: Exception) {
+        "unknown"
+    }
 }
 
 android {
@@ -12,8 +38,8 @@ android {
         applicationId = "com.eltavine.duckparse"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = gitCommitCount()
+        versionName = "1.0.${gitCommitCount()}-${gitShortHash()}"
 
         // Only 64-bit ARM — most modern devices; halves native lib size
         ndk {
