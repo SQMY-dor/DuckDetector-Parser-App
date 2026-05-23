@@ -16,17 +16,10 @@ android {
         versionName = "1.0"
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
-        }
-    }
-
     // Signing: reads from env vars set by CI (keystore never committed to repo)
     signingConfigs {
         val keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
-        if (!keystorePath.isNullOrBlank() && java.io.File(keystorePath).exists()) {
+        if (!keystorePath.isNullOrBlank() && file(keystorePath).exists()) {
             create("release") {
                 storeFile = file(keystorePath)
                 storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD") ?: ""
@@ -34,11 +27,12 @@ android {
                 keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: ""
             }
         }
-        // If env vars are missing, no signing config → unsigned APK (local builds)
     }
 
     buildTypes {
-        getByName("release") {
+        release {
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
             signingConfigs.findByName("release")?.let {
                 signingConfig = it
             }
