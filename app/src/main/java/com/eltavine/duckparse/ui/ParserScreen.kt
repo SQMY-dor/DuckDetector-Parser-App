@@ -64,12 +64,18 @@ fun ParserScreen(
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
     ) { uri ->
-        uri?.let { loadAndParse(viewModel, it, context) }
+        uri?.let { loadAndParse(viewModel, it, context, qrOnly = false) }
+    }
+
+    val qrImagePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri ->
+        uri?.let { loadAndParse(viewModel, it, context, qrOnly = true) }
     }
 
     // Handle shared image from intent
     LaunchedEffect(sharedImageUri) {
-        sharedImageUri?.let { loadAndParse(viewModel, it, context) }
+        sharedImageUri?.let { loadAndParse(viewModel, it, context, qrOnly = false) }
     }
 
     // Predictive back: when viewing a report, back returns to picker state
@@ -88,22 +94,33 @@ fun ParserScreen(
                 .padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Pick image button
+            // Pick image buttons
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Button(
-                        onClick = { imagePicker.launch("image/*") },
-                        modifier = Modifier.weight(1f),
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Select Screenshot")
+                        Button(
+                            onClick = { imagePicker.launch("image/*") },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(Icons.Rounded.Image, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Screenshot")
+                        }
+                        FilledTonalButton(
+                            onClick = { qrImagePicker.launch("image/*") },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(Icons.Rounded.QrCodeScanner, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("QR Image")
+                        }
                     }
                     OutlinedButton(
                         onClick = { viewModel.clear() },
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text("Clear")
                     }
@@ -300,6 +317,7 @@ private fun loadAndParse(
     viewModel: ParserViewModel,
     uri: Uri,
     context: android.content.Context,
+    qrOnly: Boolean,
 ) {
     try {
         val resolver = context.contentResolver
@@ -331,7 +349,7 @@ private fun loadAndParse(
 
         if (bitmap != null) {
             val label = uri.lastPathSegment ?: "image"
-            viewModel.parseImage(bitmap, label)
+            viewModel.parseImage(bitmap, label, qrOnly)
         } else {
             android.widget.Toast.makeText(context, "Failed to decode image", android.widget.Toast.LENGTH_SHORT).show()
         }

@@ -25,7 +25,7 @@ class ParserViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(ParserUiState())
     val uiState: StateFlow<ParserUiState> = _uiState.asStateFlow()
 
-    fun parseImage(bitmap: Bitmap, label: String) {
+    fun parseImage(bitmap: Bitmap, label: String, qrOnly: Boolean = false) {
         viewModelScope.launch(Dispatchers.Default) {
             _uiState.value = ParserUiState(
                 isLoading = true,
@@ -35,30 +35,32 @@ class ParserViewModel : ViewModel() {
             try {
                 var report: DeviceInfoReport? = null
 
-                // 1. QR code
+                // 1. QR code (always)
                 val qrTexts = QrDecoder.decode(bitmap)
                 if (qrTexts.isNotEmpty()) {
                     report = UltraCompactParser.parse(qrTexts.first())
                 }
 
-                // 2. Watermark
-                val wmLines = WatermarkExtractor.extract(bitmap)
-                if (wmLines.isNotEmpty()) {
-                    report = if (report != null) {
-                        UltraCompactParser.mergeWatermark(report, wmLines)
-                    } else {
-                        DeviceInfoReport(
-                            source = "watermark",
-                            sections = listOf(
-                                com.eltavine.duckparse.model.DeviceInfoSection(
-                                    title = "Watermark (OCR)",
-                                    entries = wmLines.map {
-                                        com.eltavine.duckparse.model.DeviceInfoEntry("Line", it)
-                                    },
+                // 2. Watermark (skip in QR-only mode)
+                if (!qrOnly) {
+                    val wmLines = WatermarkExtractor.extract(bitmap)
+                    if (wmLines.isNotEmpty()) {
+                        report = if (report != null) {
+                            UltraCompactParser.mergeWatermark(report, wmLines)
+                        } else {
+                            DeviceInfoReport(
+                                source = "watermark",
+                                sections = listOf(
+                                    com.eltavine.duckparse.model.DeviceInfoSection(
+                                        title = "Watermark (OCR)",
+                                        entries = wmLines.map {
+                                            com.eltavine.duckparse.model.DeviceInfoEntry("Line", it)
+                                        },
+                                    ),
                                 ),
-                            ),
-                            rawWatermarkLines = wmLines,
-                        )
+                                rawWatermarkLines = wmLines,
+                            )
+                        }
                     }
                 }
 
