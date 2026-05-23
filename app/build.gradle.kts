@@ -14,6 +14,11 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
+
+        // Only 64-bit ARM — most modern devices; halves native lib size
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
     }
 
     // Signing: reads from env vars set by CI (keystore never committed to repo)
@@ -32,10 +37,25 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
             signingConfigs.findByName("release")?.let {
                 signingConfig = it
             }
+        }
+    }
+
+    packaging {
+        resources {
+            // Exclude unused native architectures
+            excludes += setOf(
+                "lib/armeabi-v7a/**",
+                "lib/x86/**",
+                "lib/x86_64/**",
+            )
         }
     }
 
