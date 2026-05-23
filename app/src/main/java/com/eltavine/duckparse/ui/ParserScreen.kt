@@ -2,8 +2,18 @@ package com.eltavine.duckparse.ui
 
 import android.graphics.BitmapFactory
 import android.net.Uri
+import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,6 +75,11 @@ fun ParserScreen(
     // Handle shared image from intent
     LaunchedEffect(sharedImageUri) {
         sharedImageUri?.let { loadAndParse(viewModel, it, context) }
+    }
+
+    // Predictive back: when viewing a report, back returns to picker state
+    PredictiveBackHandler(enabled = uiState.value.report != null) {
+        viewModel.clear()
     }
 
     Column(modifier = modifier.fillMaxSize()) {
@@ -162,10 +177,22 @@ fun ParserScreen(
                 }
             }
 
-            // Report
+            // Report with predictive back animation
             uiState.value.report?.let { report ->
-                item { SourceBadge(report.source) }
-                item { DeviceInfoReportCard(report) }
+                item {
+                    AnimatedContent(
+                        targetState = report,
+                        transitionSpec = {
+                            (fadeIn() + slideInVertically { it / 4 }) togetherWith
+                                (fadeOut() + slideOutVertically { -it / 4 })
+                        },
+                    ) { currentReport ->
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            SourceBadge(currentReport.source)
+                            DeviceInfoReportCard(currentReport)
+                        }
+                    }
+                }
             }
         }
     }
