@@ -7,6 +7,7 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
@@ -50,7 +51,7 @@ object WatermarkExtractor {
         }
     }
 
-    private suspend fun extractAuto(bitmap: Bitmap): List<String> {
+    private suspend fun extractAuto(bitmap: Bitmap): List<String> = coroutineScope {
         val originalDeferred = async { ocrAndFilter(bitmap) }
         val blindDeferred = async {
             val processed = ImagePreprocessor.preprocessForBlindWatermark(bitmap)
@@ -72,7 +73,7 @@ object WatermarkExtractor {
         merged.addAll(blind)
         merged.addAll(screenshot)
 
-        return deduplicate(merged.toList())
+        deduplicate(merged.toList())
     }
 
     private fun deduplicate(lines: List<String>): List<String> {

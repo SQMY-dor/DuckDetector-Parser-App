@@ -67,4 +67,4 @@ fun IntArray.toGrayscaleBitmap(width: Int, height: Int): Bitmap {
     return bitmap
 }
 
-fun Bitmap.clone(): Bitmap = copy(config, isMutable)
+fun Bitmap.clone(): Bitmap = copy(config ?: Bitmap.Config.RGB_565, isMutable)
