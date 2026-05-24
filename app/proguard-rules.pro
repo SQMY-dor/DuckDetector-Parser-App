@@ -15,9 +15,5 @@
 -keep class com.google.mlkit.common.** { *; }
 -dontwarn com.google.mlkit.**
 
-# --- ZXing ---
--keep class com.google.zxing.** { *; }
--dontwarn com.google.zxing.**
-
 # --- Compose ---
 -dontwarn androidx.compose.**

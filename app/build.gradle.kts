@@ -1,5 +1,3 @@
-import java.io.ByteArrayOutputStream
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -106,8 +104,11 @@ dependencies {
     // ML Kit – on-device text recognition (watermark OCR)
     implementation("com.google.mlkit:text-recognition:16.0.1")
 
-    // ZXing – used to generate QR codes for display
-    implementation("com.google.zxing:core:3.5.3")
+    // CameraX – live QR scanning and photo capture
+    implementation("androidx.camera:camera-core:1.4.0")
+    implementation("androidx.camera:camera-camera2:1.4.0")
+    implementation("androidx.camera:camera-lifecycle:1.4.0")
+    implementation("androidx.camera:camera-view:1.4.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

@@ -7,6 +7,7 @@ import com.eltavine.duckparse.model.DeviceInfoReport
 import com.eltavine.duckparse.parser.QrDecoder
 import com.eltavine.duckparse.parser.UltraCompactParser
 import com.eltavine.duckparse.parser.WatermarkExtractor
+import com.eltavine.duckparse.parser.WatermarkPreprocessing
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,7 +44,7 @@ class ParserViewModel : ViewModel() {
 
                 // 2. Watermark (skip in QR-only mode)
                 if (!qrOnly) {
-                    val wmLines = WatermarkExtractor.extract(bitmap)
+                    val wmLines = WatermarkExtractor.extract(bitmap, WatermarkPreprocessing.AUTO)
                     if (wmLines.isNotEmpty()) {
                         report = if (report != null) {
                             UltraCompactParser.mergeWatermark(report, wmLines)
@@ -81,6 +82,16 @@ class ParserViewModel : ViewModel() {
                     selectedImageLabel = label,
                 )
             }
+        }
+    }
+
+    fun parseQrText(qrText: String) {
+        viewModelScope.launch(Dispatchers.Default) {
+            val report = UltraCompactParser.parse(qrText)
+            _uiState.value = ParserUiState(
+                report = report,
+                selectedImageLabel = "Live Camera",
+            )
         }
     }
 

@@ -8,6 +8,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -26,6 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.Image
@@ -44,6 +46,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -74,6 +80,9 @@ fun ParserScreen(
     ) { uri ->
         uri?.let { loadAndParse(viewModel, it, context, qrOnly = true) }
     }
+
+    var showCamera by remember { mutableStateOf(false) }
+    var cameraMode by remember { mutableStateOf(CameraMode.QR_SCAN) }
 
     // Handle shared image from intent
     LaunchedEffect(sharedImageUri) {
@@ -118,6 +127,33 @@ fun ParserScreen(
                             Icon(Icons.Rounded.QrCodeScanner, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
                             Text("QR Image")
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Button(
+                            onClick = {
+                                cameraMode = CameraMode.QR_SCAN
+                                showCamera = true
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(Icons.Rounded.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Scan QR")
+                        }
+                        FilledTonalButton(
+                            onClick = {
+                                cameraMode = CameraMode.PHOTO_CAPTURE
+                                showCamera = true
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(Icons.Rounded.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Photo")
                         }
                     }
                     OutlinedButton(
@@ -202,6 +238,25 @@ fun ParserScreen(
                     }
                 }
             }
+        }
+
+        AnimatedVisibility(
+            visible = showCamera,
+            enter = fadeIn(),
+            exit = fadeOut(),
+        ) {
+            CameraPermissionGate(
+                onDismiss = { showCamera = false },
+                onQrScanned = { text ->
+                    viewModel.parseQrText(text)
+                    showCamera = false
+                },
+                onPhotoCaptured = { bitmap ->
+                    viewModel.parseImage(bitmap, "Camera Photo")
+                    showCamera = false
+                },
+                initialMode = cameraMode,
+            )
         }
     }
 }
