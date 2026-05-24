@@ -46,9 +46,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +60,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.eltavine.duckparse.model.DeviceInfoReport
 import com.eltavine.duckparse.model.DeviceInfoSection
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,19 +71,20 @@ fun ParserScreen(
     sharedImageUri: Uri? = null,
     modifier: Modifier = Modifier,
 ) {
-    val uiState = viewModel.uiState
+    val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     val imagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
-        uri?.let { loadAndParse(viewModel, it, context, qrOnly = false) }
+        uri?.let { scope.launch { loadAndParse(viewModel, it, context, qrOnly = false) } }
     }
 
     val qrImagePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
     ) { uri ->
-        uri?.let { loadAndParse(viewModel, it, context, qrOnly = true) }
+        uri?.let { scope.launch { loadAndParse(viewModel, it, context, qrOnly = true) } }
     }
 
     var showCamera by remember { mutableStateOf(false) }
@@ -90,7 +96,7 @@ fun ParserScreen(
     }
 
     // Predictive back: when viewing a report, back returns to picker state
-    PredictiveBackHandler(enabled = uiState.value.report != null) {
+    PredictiveBackHandler(enabled = uiState.report != null) {
         viewModel.clear()
     }
 
@@ -166,7 +172,7 @@ fun ParserScreen(
             }
 
             // Image label
-            uiState.value.selectedImageLabel?.let { label ->
+            uiState.selectedImageLabel?.let { label ->
                 item {
                     Text(
                         text = "Source: $label",
@@ -177,7 +183,7 @@ fun ParserScreen(
             }
 
             // Loading
-            if (uiState.value.isLoading) {
+            if (uiState.isLoading) {
                 item {
                     Box(
                         modifier = Modifier
@@ -195,7 +201,7 @@ fun ParserScreen(
             }
 
             // Error
-            uiState.value.errorMessage?.let { error ->
+            uiState.errorMessage?.let { error ->
                 item {
                     Surface(
                         color = MaterialTheme.colorScheme.errorContainer,
@@ -222,7 +228,7 @@ fun ParserScreen(
             }
 
             // Report with predictive back animation
-            uiState.value.report?.let { report ->
+            uiState.report?.let { report ->
                 item {
                     AnimatedContent(
                         targetState = report,
@@ -370,65 +376,54 @@ fun DeviceInfoSectionCard(section: DeviceInfoSection) {
     }
 }
 
-private fun loadAndParse(
+private suspend fun loadAndParse(
     viewModel: ParserViewModel,
     uri: Uri,
     context: android.content.Context,
     qrOnly: Boolean,
 ) {
-    try {
-        val resolver = context.contentResolver
+    val result: Pair<android.graphics.Bitmap?, String?> = withContext(Dispatchers.IO) {
+        try {
+            val resolver = context.contentResolver
+            val cacheFile = java.io.File(context.cacheDir, "duckparse_${System.currentTimeMillis()}.jpg")
+            resolver.openInputStream(uri)?.use { input ->
+                cacheFile.outputStream().use { output -> input.copyTo(output) }
+            } ?: return@withContext null to "Cannot read image (privacy restricted)"
 
-        // Copy to app cache to work around privacy-protected content URIs
-        val cacheFile = java.io.File(context.cacheDir, "duckparse_${System.currentTimeMillis()}.jpg")
-        resolver.openInputStream(uri)?.use { input ->
-            cacheFile.outputStream().use { output ->
-                input.copyTo(output)
+            if (!cacheFile.exists() || cacheFile.length() == 0L) {
+                cacheFile.delete()
+                return@withContext null to "Failed to copy image"
             }
-        } ?: run {
-            Toast.makeText(context, "Cannot read image (privacy restricted)", Toast.LENGTH_SHORT).show()
-            return
-        }
 
-        if (!cacheFile.exists() || cacheFile.length() == 0L) {
-            Toast.makeText(context, "Failed to copy image", Toast.LENGTH_SHORT).show()
+            val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(cacheFile.absolutePath, opts)
+
+            val maxDim = 2048
+            val sampleSize = if (opts.outWidth > maxDim || opts.outHeight > maxDim) {
+                maxOf(opts.outWidth, opts.outHeight) / maxDim
+            } else {
+                1
+            }
+
+            val decodeOpts = BitmapFactory.Options().apply {
+                inSampleSize = sampleSize
+                inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
+            }
+            val bitmap = BitmapFactory.decodeFile(cacheFile.absolutePath, decodeOpts)
             cacheFile.delete()
-            return
+            bitmap to null
+        } catch (e: SecurityException) {
+            null to "Permission denied — try selecting a different image"
+        } catch (e: Exception) {
+            null to "Error: ${e.message}"
         }
+    }
 
-        // Sample image dimensions first to avoid OOM
-        val opts = BitmapFactory.Options().apply {
-            inJustDecodeBounds = true
-        }
-        BitmapFactory.decodeFile(cacheFile.absolutePath, opts)
-
-        // Calculate sample size for large images (max 2048px on any side)
-        val maxDim = 2048
-        val sampleSize = if (opts.outWidth > maxDim || opts.outHeight > maxDim) {
-            maxOf(opts.outWidth, opts.outHeight) / maxDim
-        } else {
-            1
-        }
-
-        // Decode at reduced resolution
-        val decodeOpts = BitmapFactory.Options().apply {
-            inSampleSize = sampleSize
-            inPreferredConfig = android.graphics.Bitmap.Config.RGB_565
-        }
-        val bitmap = BitmapFactory.decodeFile(cacheFile.absolutePath, decodeOpts)
-
-        // Clean up cache file immediately
-        cacheFile.delete()
-
-        if (bitmap != null) {
-            val label = uri.lastPathSegment ?: "image"
-            viewModel.parseImage(bitmap, label, qrOnly)
-        } else {
-            Toast.makeText(context, "Failed to decode image", Toast.LENGTH_SHORT).show()
-        }
-    } catch (e: SecurityException) {
-        Toast.makeText(context, "Permission denied — try selecting a different image", Toast.LENGTH_SHORT).show()
-    } catch (e: Exception) {
-        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+    val (bitmap, error) = result
+    if (bitmap != null) {
+        val label = uri.lastPathSegment ?: "image"
+        viewModel.parseImage(bitmap, label, qrOnly)
+    } else if (error != null) {
+        Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
     }
 }
